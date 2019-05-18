@@ -112,7 +112,7 @@ def plot_result(x_max, t_max, dx, dt, u):
 # Solver for heat quation in 1 dimension
 # Uses finite diference equations to solve explicitly
 ###################################################################################################
-def heateq_1D(dims, resolution, bc_1, bc_2, ic, do_plot):
+def heateq_1D(dims, resolution, bc_1, bc_2, ic, a, do_plot):
 
 ########################
 
@@ -145,7 +145,9 @@ def heateq_1D(dims, resolution, bc_1, bc_2, ic, do_plot):
 		for x in range(1, x_max-1):
 
 			# Main finite difference equation
-			u[x,t] = (dt / (dx * dx)) * (u[x+1][t-1] - 2*u[x][t-1] + u[x-1][t-1]) + u[x][t-1]
+			u[x,t] = (a * dt / (dx * dx)) * (u[x+1][t-1] - 2*u[x][t-1] + u[x-1][t-1]) + u[x][t-1]
+			#print(u[x,t])
+
 
 ########################
 	# Plot results
