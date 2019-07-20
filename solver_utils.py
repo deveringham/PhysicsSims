@@ -52,13 +52,13 @@ def parse_array_arg(arr, expected_dims, expected_type):
 
 	# Make sure number of dimensions is right
 	if len(arr.shape) != expected_dims.shape[0]:
-		print('Number array dims (' + str(len(arr.shape)) + ') does not match number of expected dims (' + str(expexted_dims.shape[0]) + ')')
+		print('Number array dims (' + str(len(arr.shape)) + ') does not match number of expected dims (' + str(expected_dims.shape[0]) + ')')
 		return arr, False
 
 	# Make sure dimensions match
 	for i in range(len(arr.shape)):
 		if arr.shape[i] != expected_dims[i]:
-			print('Dimension ' + str(i+1) + ' mismatch: got ' + str(arr.shape[i]) +', expected ' + str(expexted_dims[i]))
+			print('Dimension ' + str(i+1) + ' mismatch: got ' + str(arr.shape[i]) +', expected ' + str(expected_dims[i]))
 			return arr, False
 
 	# Check array type
@@ -71,15 +71,28 @@ def parse_array_arg(arr, expected_dims, expected_type):
 
 
 ###################################################################################################
-# gen_zero_bc
+# gen_bc_zero
 #	Generates a boundary condition array of all 0s
 ###################################################################################################
 def gen_bc_zero(t_max):
 	return [0.0 for i in range(t_max)]
 
+###################################################################################################
+# gen_bc_const
+#	Generates a boundary condition array with a constant value
+###################################################################################################
+def gen_bc_const(t_max, val=0.0):
+	return [val for i in range(t_max)]
 
 ###################################################################################################
-# gen_sin_bc
+# gen_bc_lin
+#	Generates a linear boundary condition array
+###################################################################################################
+def gen_bc_const(t_max, min_val=0.0, max_val=1.0):
+	return [min_val+(max_val/(t_max-1))*i for i in range(t_max)]
+
+###################################################################################################
+# gen_bc_sin
 #	Generates a sin wave boundary condition array
 ###################################################################################################
 def gen_bc_sin(t_max, dt=1.0, amp=1.0, freq=1.0, phase=0.0):
@@ -87,7 +100,7 @@ def gen_bc_sin(t_max, dt=1.0, amp=1.0, freq=1.0, phase=0.0):
 
 
 ###################################################################################################
-# gen_step_bc
+# gen_bc_step
 #	Generates a step function boundary condition array
 ###################################################################################################
 def gen_bc_step(t_max, dt=1.0, step_min=0.0, step_max=1.0, width=1.0, duty_cycle=0.5, offset=0.0):

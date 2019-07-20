@@ -14,7 +14,7 @@
 # Function to solve heat equation in 2 dimensions with finite difference method
 #
 # Dylan Everingham
-# 5/29/2018
+# 7/20/2018
 #
 
 ###################################################################################################
@@ -23,91 +23,167 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from solver_utils import *
+###################################################################################################
 
 ###################################################################################################
-# heateq_2d
-# 	Solver for heat quation in 2 dimensions
-# 	Uses finite diference equations to solve explicitly
+# Helper function to parse arguments to heateq_2D
 ###################################################################################################
-def heateq_2D(dims, resolution, bc_0, bc_max, ic, do_plot):
+def parse_args(dims, resolution, bc_1, bc_2, ic):
+	# Parse dims parameter
+	dims, dims_pass = parse_array_arg(dims, [3], int)
+	if not dims_pass:
+		raise TypeError('Incorrectly formed dims argument')
+		return 0
+
+	# Parse resolution parameter
+	resolution, resolution_pass = parse_array_arg(resolution, [3], float)
+	if not resolution_pass:
+		raise TypeError('Incorrectly formed resolution argument')
+		return 0
+
+	# Parse boundary conditions (BCs)
+	# BC arcuments are an array of BCs, with an empty array in the place of absent BCs
+	for d in range(len(dims)-1):
+		for n in range(2):
+			# The maximum number of BCs is 2 * the number of space dimensions
+			i = 2*d + n
+
+			# Parse type 1 (Dirchlet) boundary conditions, if present
+			if (len(bc_1) >= i+1):
+				if (bc_1[i] != []):		
+					bc, bc_pass = parse_array_arg(bc_1[i], [dims[-1]], float)
+					if not bc_pass:
+						raise TypeError('Incorrectly formed bc_1 argument')
+						return 0
+			
+			# Parse type 2 (Neumann) boundary conditions, if present
+			if (len(bc_2) >= i+1):
+				if (bc_2[i] != []):
+					bc, bc_pass = parse_array_arg(bc_2[i], [dims[-1]], float)
+					if not bc_pass:
+						raise TypeError('Incorrectly formed bc_2 argument')
+						return 0
+
+			# There must be at least one BC on each boundary
+			n_bcs = int(bc_1[i] != []) + int(bc_2[i] != [])
+			if (n_bcs < 1):
+				raise TypeError('Not enough BCs provided')
+				return 0
+
+
+	# Parse initial condition (IC)
+	ic, ic_pass = parse_array_arg(ic, [dims[0], dims[1]], float)
+	if not ic_pass:
+		raise TypeError('Incorrectly formed ic argument')
+		return 0
+
+	return 1
+
+###################################################################################################
+# Helper function to plot results from heateq_2D
+###################################################################################################
+def plot_result(x_max, y_max, t_max, dx, dy, dt, u):
+	fig, ax = plt.subplots()
+	p, = plt.plot([], [], 'ro', animated=True)
+	it_text = ax.text(0.5,-0.9,'')
+
+	def init():
+		ax.set_xlim(0,x_max*dx)
+		ax.set_ylim(np.amin(u),np.amax(u))
+		return p,
+
+	def update(frame_num):
+		p.set_data(np.linspace(0, (x_max-1)*dx, x_max), u[:,frame_num])
+		it_text.set_text('Iteration #' + str(frame_num) + ' / ' + str(t_max))
+		return p,it_text
+
+	ani = FuncAnimation(fig, update, frames=np.arange(t_max), init_func=init, blit=True, interval=1)
+
+	plt.title('1D Heat Equation')
+	plt.xlabel('Distance')
+	plt.ylabel('Heat')
+
+	plt.show()
+
+
+###################################################################################################
+# Solver for heat quation in 2 dimensions
+# Uses finite diference equations to solve explicitly
+###################################################################################################
+def heateq_2D(dims, resolution, bc_1, bc_2, ic, a, do_plot):
 
 ########################
 	# Parse arguments
 	print('Parsing arguments...')
+	parse = parse_args(dims, resolution, bc_1, bc_2, ic)
+	if not parse:
+		return []
 
-	# Parse dims parameter
-	dims, dims_pass = parse_array_arg(dims, [3], int)
-	if dims_pass:
-		x_max, y_max, t_max = dims[0], dims[1], dims[2]
-	else:
-		raise TypeError('Incorrectly formed dims argument')
-		return
+	# Get parameters
+	x_max, y_max, t_max = dims[0], dims[1], dims[2]
+	dx, dy, dt = resolution[0], resolution[1], resolution[2]
 
-	# Parse resolution parameter
-	resolution, resolution_pass = parse_array_arg(resolution, [3], float)
-	if resolution_pass:
-		dx, dy, dt = resolution[0], resolution[1], resolution[2]
-	else:
-		raise TypeError('Incorrectly formed resolution argument')
-		return
-
-	# If dims and resolution parse correctly, allocate results matrix
+	# Allocate results matrix
 	u = np.zeros((x_max,y_max,t_max))
-	
-	# Parse boundary conditions and put them in results matrix
-	bc_0, bc_0_pass = parse_array_arg(bc_0, [t_max], float)
-	if bc_0_pass:
-		u[0, :] = bc_0
-	else:
-		raise TypeError('Incorrectly formed bc_0 argument')
-		return
 
-	bc_max, bc_max_pass = parse_array_arg(bc_max, [t_max], float)
-	if bc_max_pass:
-		u[x_max-1, :] = bc_max
-	else:
-		raise TypeError('Incorrectly formed bc_max argument')
-		return
-
-	# Parse initial condition and put it in results matrix
-	ic, ic_pass = parse_array_arg(ic, [x_max], float)
-	if ic_pass:
-		u[:, 0] = ic
-	else:
-		raise TypeError('Incorrectly formed ic argument')
-		return
+	# IC
+	u[:, :, 0] = ic
 
 ########################
 	# Solve
 	print('Solving...')
-
 	for t in range(1, t_max):
-		for x in range(1, x_max-1):
-			for y in range(1, y_max-1):
+		for x in range(x_max):
+			for y in range(y_max):
 
-				# Main finite difference equation
-				u[x,y,t] = ((dt / (dx * dx)) * (u[x+1][y][t-1] - 2*u[x][y][t-1] + u[x-1][y][t-1])) + ((dt / (dy * dy)) * (u[x][y+1][t-1] - 2*u[x][y][t-1] + u[x][y-1][t-1])) + u[x][y][t-1]
+				# Handle BCs
+				if (x == 1):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[0] != []):
+						u[x,t] = bc_1[0][t]
+
+					elif(bc_2[0] != []):
+						# Main finite difference equation (type 2 bcs)
+						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+
+				elif (x == (x_max-1)):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[0] != []):
+						u[x,t] = bc_1[0][t]
+
+					elif(bc_2[0] != []):
+						# Main finite difference equation (type 2 bcs)
+						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+
+				
+				# BCs intersecting at corners must agree
+				if (y == 1):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[0] != []):
+						u[x,t] = bc_1[0][t]
+
+					elif(bc_2[0] != []):
+						# Main finite difference equation (type 2 bcs)
+						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+
+				elif (x == (x_max-1)):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[0] != []):
+						u[x,t] = bc_1[0][t]
+
+					elif(bc_2[0] != []):
+						# Main finite difference equation (type 2 bcs)
+						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+					
+				else:
+					# Main finite difference equation (not at boundaries)
+					u[x,t] = (a * dt / (dx * dx)) * (u[x+1][t-1] - 2*u[x][t-1] + u[x-1][t-1]) + u[x][t-1]
 
 ########################
 	# Plot results
 	if (do_plot):
 		print('Plotting and animating results...')
-
-		fig, ax = plt.subplots()
-		p, = plt.plot([], [], 'ro', animated=True)
-
-		def init():
-			ax.set_xlim(0,x_max*dx)
-			ax.set_ylim(np.amin(u),np.amax(u))
-			return p,
-
-		def update(frame_num):
-			p.set_data(np.linspace(0, (x_max-1)*dx, x_max), u[:,frame_num])
-			return p,
-
-		ani = FuncAnimation(fig, update, frames=np.arange(t_max), init_func=init, blit=True, interval=1)
-
-		plt.show()
+		plot_result(x_max, t_max, dx, dt, u)
 
 	# Return result array
 	return u
