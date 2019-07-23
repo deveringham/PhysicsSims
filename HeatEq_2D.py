@@ -137,7 +137,21 @@ def heateq_2D(dims, resolution, bc_1, bc_2, ic, a, do_plot):
 			for y in range(y_max):
 
 				# Handle BCs
-				if (x == 1):
+				# Corners
+				if ((x in [1,x_max-1]) and (y in [1,ymax-1])):
+
+				# X boundaries
+				elif (x in [1,x_max-1]):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[0] != []):
+						u[x,y,t] = bc_1[0][t]
+
+					elif(bc_2[0] != []):
+						# Main finite difference equation (type 2 bcs)
+						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+
+				# Y boundaries
+				elif (y in [1,y_max-1]):
 					# Type 1 BCs take precedence over type 2
 					if (bc_1[0] != []):
 						u[x,t] = bc_1[0][t]
@@ -146,35 +160,6 @@ def heateq_2D(dims, resolution, bc_1, bc_2, ic, a, do_plot):
 						# Main finite difference equation (type 2 bcs)
 						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
 
-				elif (x == (x_max-1)):
-					# Type 1 BCs take precedence over type 2
-					if (bc_1[0] != []):
-						u[x,t] = bc_1[0][t]
-
-					elif(bc_2[0] != []):
-						# Main finite difference equation (type 2 bcs)
-						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
-
-				
-				# BCs intersecting at corners must agree
-				if (y == 1):
-					# Type 1 BCs take precedence over type 2
-					if (bc_1[0] != []):
-						u[x,t] = bc_1[0][t]
-
-					elif(bc_2[0] != []):
-						# Main finite difference equation (type 2 bcs)
-						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
-
-				elif (x == (x_max-1)):
-					# Type 1 BCs take precedence over type 2
-					if (bc_1[0] != []):
-						u[x,t] = bc_1[0][t]
-
-					elif(bc_2[0] != []):
-						# Main finite difference equation (type 2 bcs)
-						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
-					
 				else:
 					# Main finite difference equation (not at boundaries)
 					u[x,t] = (a * dt / (dx * dx)) * (u[x+1][t-1] - 2*u[x][t-1] + u[x-1][t-1]) + u[x][t-1]

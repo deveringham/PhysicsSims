@@ -88,8 +88,8 @@ def gen_bc_const(t_max, val=0.0):
 # gen_bc_lin
 #	Generates a linear boundary condition array
 ###################################################################################################
-def gen_bc_const(t_max, min_val=0.0, max_val=1.0):
-	return [min_val+(max_val/(t_max-1))*i for i in range(t_max)]
+def gen_bc_lin(t_max, min_val=0.0, max_val=1.0):
+	return [min_val+((max_val-min_val)/(t_max-1))*i for i in range(t_max)]
 
 ###################################################################################################
 # gen_bc_sin
