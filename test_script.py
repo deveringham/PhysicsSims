@@ -1,4 +1,4 @@
-# Test script
+# Test script for 1d heat eq csolver
 
 # Dependencies
 import numpy as np

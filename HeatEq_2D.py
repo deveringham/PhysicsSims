@@ -22,6 +22,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.colors import Normalize
 from solver_utils import *
 ###################################################################################################
 
@@ -51,7 +52,7 @@ def parse_args(dims, resolution, bc_1, bc_2, ic):
 			# Parse type 1 (Dirchlet) boundary conditions, if present
 			if (len(bc_1) >= i+1):
 				if (bc_1[i] != []):		
-					bc, bc_pass = parse_array_arg(bc_1[i], [dims[-1]], float)
+					bc, bc_pass = parse_array_arg(bc_1[i], [dims[1-d], dims[-1]], float)
 					if not bc_pass:
 						raise TypeError('Incorrectly formed bc_1 argument')
 						return 0
@@ -59,7 +60,7 @@ def parse_args(dims, resolution, bc_1, bc_2, ic):
 			# Parse type 2 (Neumann) boundary conditions, if present
 			if (len(bc_2) >= i+1):
 				if (bc_2[i] != []):
-					bc, bc_pass = parse_array_arg(bc_2[i], [dims[-1]], float)
+					bc, bc_pass = parse_array_arg(bc_2[i], [dims[1-d], dims[-1]], float)
 					if not bc_pass:
 						raise TypeError('Incorrectly formed bc_2 argument')
 						return 0
@@ -84,24 +85,24 @@ def parse_args(dims, resolution, bc_1, bc_2, ic):
 ###################################################################################################
 def plot_result(x_max, y_max, t_max, dx, dy, dt, u):
 	fig, ax = plt.subplots()
-	p, = plt.plot([], [], 'ro', animated=True)
+	norm = Normalize(np.amin(u), np.amax(u))
+	img = ax.imshow(u[:,:,0], Norm=norm)
 	it_text = ax.text(0.5,-0.9,'')
 
 	def init():
-		ax.set_xlim(0,x_max*dx)
-		ax.set_ylim(np.amin(u),np.amax(u))
-		return p,
+		ax.set_xlim(0,x_max-1)
+		ax.set_ylim(0,y_max-1)
+		return img,
 
 	def update(frame_num):
-		p.set_data(np.linspace(0, (x_max-1)*dx, x_max), u[:,frame_num])
+		img = ax.imshow(u[:,:,frame_num], Norm=norm)
+		#p.set_data(np.linspace(0, (x_max-1)*dx, x_max), u[:,frame_num])
 		it_text.set_text('Iteration #' + str(frame_num) + ' / ' + str(t_max))
-		return p,it_text
+		return img,
 
-	ani = FuncAnimation(fig, update, frames=np.arange(t_max), init_func=init, blit=True, interval=1)
+	ani = FuncAnimation(fig, update, frames=np.arange(t_max), init_func=init, blit=True, interval=100)
 
-	plt.title('1D Heat Equation')
-	plt.xlabel('Distance')
-	plt.ylabel('Heat')
+	plt.title('2D Heat Equation')
 
 	plt.show()
 
@@ -138,37 +139,76 @@ def heateq_2D(dims, resolution, bc_1, bc_2, ic, a, do_plot):
 
 				# Handle BCs
 				# Corners
-				if ((x in [1,x_max-1]) and (y in [1,ymax-1])):
+				if ((x in [0,x_max-1]) and (y in [0,y_max-1])):
+					# Identify which corner we're looking at
+					x_edge = int(x>0)
+					y_edge = 2+int(y>0)
+
+					# Identify whether type of conditions match at corner
+					if ((bc_1[x_edge] != []) and (bc_1[y_edge] != [])):
+						# Identify if values match at corner
+						u_1 = bc_1[x_edge][y][t]
+						u_2 = bc_1[y_edge][x][t]
+
+						if (u_1 == u_2):
+							u[x,y,t] = u_1
+						else:
+							# Values did not match at corner
+							print('BC value mismatch at ' + str((x,y,t)))
+							return []
+
+					elif ((bc_2[x_edge] != []) and (bc_2[y_edge] != [])):
+						# Identify if values match at corner
+						#u_1 = bc_1[x_edge][int(x>1)*(y_max-1)][t]
+						#u_2 = bc_1[y_edge][int(y>1)*(x_max-1)][t]
+
+						if (u_1 == u_2):
+							u[x,y,t] = u_1
+						else:
+							# Values did not match at corner
+							print('BC value mismatch at ' + str((x,y,t)))
+							return []
+
+					else:
+						# Type of conditions did not match at corner
+						print('BC type mismatch at ' + str((x,y,t)))
+						return []
 
 				# X boundaries
-				elif (x in [1,x_max-1]):
-					# Type 1 BCs take precedence over type 2
-					if (bc_1[0] != []):
-						u[x,y,t] = bc_1[0][t]
+				elif (x in [0,x_max-1]):
+					# Identify which edge we're looking at
+					x_edge = int(x>0)
 
-					elif(bc_2[0] != []):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[x_edge] != []):
+						u[x,y,t] = bc_1[x_edge][y][t]
+
+					#elif(bc_2[0] != []):
 						# Main finite difference equation (type 2 bcs)
-						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+						#u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
 
 				# Y boundaries
-				elif (y in [1,y_max-1]):
-					# Type 1 BCs take precedence over type 2
-					if (bc_1[0] != []):
-						u[x,t] = bc_1[0][t]
+				elif (y in [0,y_max-1]):
+					# Identify which edge we're looking at
+					y_edge = 2+int(y>0)
 
-					elif(bc_2[0] != []):
+					# Type 1 BCs take precedence over type 2
+					if (bc_1[y_edge] != []):
+						u[x,y,t] = bc_1[y_edge][x][t]
+
+					#elif(bc_2[0] != []):
 						# Main finite difference equation (type 2 bcs)
-						u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
+						#u[x,t] = (a * dt) * bc_2[0][t] + u[x][t-1]
 
 				else:
 					# Main finite difference equation (not at boundaries)
-					u[x,t] = (a * dt / (dx * dx)) * (u[x+1][t-1] - 2*u[x][t-1] + u[x-1][t-1]) + u[x][t-1]
+					u[x,y,t] = (a * dt) * ( ((u[x+1,y,t-1] - 2*u[x,y,t-1] + u[x-1,y,t-1]) / (dx * dx)) + ((u[x,y+1,t-1] - 2*u[x,y,t-1] + u[x,y-1,t-1]) / (dy * dy)) + u[x,y,t] )
 
 ########################
 	# Plot results
 	if (do_plot):
 		print('Plotting and animating results...')
-		plot_result(x_max, t_max, dx, dt, u)
+		plot_result(x_max, y_max, t_max, dx, dy, dt, u)
 
 	# Return result array
 	return u

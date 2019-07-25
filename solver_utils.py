@@ -52,7 +52,7 @@ def parse_array_arg(arr, expected_dims, expected_type):
 
 	# Make sure number of dimensions is right
 	if len(arr.shape) != expected_dims.shape[0]:
-		print('Number array dims (' + str(len(arr.shape)) + ') does not match number of expected dims (' + str(expected_dims.shape[0]) + ')')
+		print('Number of array dims (' + str(len(arr.shape)) + ') does not match number of expected dims (' + str(expected_dims.shape[0]) + ')')
 		return arr, False
 
 	# Make sure dimensions match
@@ -106,10 +106,5 @@ def gen_bc_sin(t_max, dt=1.0, amp=1.0, freq=1.0, phase=0.0):
 def gen_bc_step(t_max, dt=1.0, step_min=0.0, step_max=1.0, width=1.0, duty_cycle=0.5, offset=0.0):
 	return [step_min if (((i+offset)%(2*width))<(2*width*duty_cycle)) else step_max for i in range(t_max)]
 
-
-###################################################################################################
-# gen_tri_bc
-#	Generates a triangle wave boundary condition array
-###################################################################################################
 
 
